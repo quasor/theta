@@ -78,7 +78,6 @@ class App :: Platform.Delegate, Layout.Editor.Delegate {
 
 	def handleFrame {
 		var time = _platform.seconds
-
 		if _animation != .NONE {
 			var t = (time - _startTime) / (_endTime - _startTime)
 
@@ -485,5 +484,6 @@ namespace App {
 		} else {
 			platform.fetchResource("fonts.bin", bytes => new(platform, DataArray.new(bytes)))
 		}
+		console.log("Hello")
 	}
 }

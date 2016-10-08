@@ -69,9 +69,18 @@ class Canvas :: Layout.Renderer {
 	}
 
 	def adjustScaleWithPin(x double, y double, ratio double) {
-		_origin.x += (x - _origin.x) * (1 - ratio)
-		_origin.y += (y - _origin.y) * (1 - ratio)
 		_scale *= ratio
+		if _scale < 3 {
+			_scale = 3
+			return
+		}
+		if _scale > 64000 {
+			_scale = 64000
+			return
+		}
+		console.log(_scale)
+		# _origin.x += (x - _origin.x) * (1 - ratio)
+		# _origin.y += (y - _origin.y) * (1 - ratio)
 	}
 
 	def beginFrame {
@@ -207,24 +216,28 @@ class Canvas :: Layout.Renderer {
 		var height = _platform.height
 
 		# Grid lines
-		var step = Math.pow(10, Math.round(Math.log(scale / 64) / Math.log(10)))
-		var ratio = step / scale
-		var left = Math.ceil(-origin.x * ratio) as int
-		var top = Math.ceil((height - origin.y) * -ratio) as int
-		var right = Math.ceil((width - origin.x) * ratio) as int
-		var bottom = Math.ceil(-origin.y * -ratio) as int
+			var step = Math.pow(10, Math.round(Math.log(scale / 64) / Math.log(10)))
+			var ratio = step / scale
+			var left = Math.ceil(-origin.x * ratio) as int
+			var top = Math.ceil((height - origin.y) * -ratio) as int
+			var right = Math.ceil((width - origin.x) * ratio) as int
+			var bottom = Math.ceil(-origin.y * -ratio) as int
 
-		# Horizontal axis
-		for x in left..right {
-			var tx = origin.x + x * scale / step
-			_smooth.strokeLineWithoutEndpointAA(tx, 0, tx, height, x == 0 ? .BLACK : x % 10 == 0 ? GRID_DARK_COLOR : GRID_LIGHT_COLOR, x == 0 ? 2 : 1)
-		}
+			# Vertical axis
+			for x in left..right {
+				if scale >= 10000 {
+					var tx = origin.x + x * scale / step
+					_smooth.strokeLineWithoutEndpointAA(tx, 0, tx, height, x == 0 ? .BLACK : x % 10 == 0 ? GRID_DARK_COLOR : GRID_LIGHT_COLOR, x == 0 ? 2 : 1)
+				}
+			}
 
-		# Vertical axis
-		for y in top..bottom {
-			var ty = origin.y - y * scale / step
-			_smooth.strokeLineWithoutEndpointAA(0, ty, width, ty, y == 0 ? .BLACK : y % 10 == 0 ? GRID_DARK_COLOR : GRID_LIGHT_COLOR, y == 0 ? 2 : 1)
-		}
+			# Horizontal axis
+			for y in top..bottom {
+				if scale >= 10000 {
+					var ty = origin.y - y * scale / step
+					_smooth.strokeLineWithoutEndpointAA(0, ty, width, ty, y == 0 ? .BLACK : y % 10 == 0 ? GRID_DARK_COLOR : GRID_LIGHT_COLOR, y == 0 ? 2 : 1)
+				}
+			}
 
 		# Coordinate text and tick marks
 		var log = Math.log(scale / 100) / Math.log(10)
@@ -241,22 +254,22 @@ class Canvas :: Layout.Renderer {
 		var textBottom = Math.ceil((-100 - origin.y) * -textRatio) as int
 
 		# Horizontal axis
-		var textY = Math.clamp(origin.y, 0, height - GRID_FONT_SIZE * 1.3)
+		var textY = 0 # Math.clamp(origin.y, 0, height - GRID_FONT_SIZE * 1.3)
 		for x in textLeft..textRight {
 			var tx = origin.x + x * scale / textStep
 			if x != 0 {
-				_smooth.strokeLine(tx, origin.y - GRID_TICK_SIZE, tx, origin.y + GRID_TICK_SIZE, .BLACK, 2)
+				_smooth.strokeLine(tx, 0, tx, 0 + GRID_TICK_SIZE, .BLACK, 2)
 			}
 			addText(_formatNumber(x / textStep), tx + GRID_FONT_SIZE * 0.3, textY + GRID_FONT_SIZE * 0.1, GRID_FONT_SIZE, .PREFER_NORMAL)
 		}
 
 		# Vertical axis
-		var textX = Math.max(origin.x, 0) + GRID_FONT_SIZE * 0.3
+		var textX = 0 # Math.max(origin.x, 0) + GRID_FONT_SIZE * 0.3
 		for y in textTop..textBottom {
 			if y != 0 {
 				var text = _formatNumber(y / textStep)
 				var ty = origin.y - y * scale / textStep
-				_smooth.strokeLine(origin.x - GRID_TICK_SIZE, ty, origin.x + GRID_TICK_SIZE, ty, .BLACK, 2)
+				_smooth.strokeLine(0, ty, 0 + GRID_TICK_SIZE, ty, .BLACK, 2)
 				addText(text, Math.min(textX, width - _computeTextWidth(text, GRID_FONT_SIZE, .PREFER_NORMAL) - GRID_FONT_SIZE * 0.3),
 					ty + GRID_FONT_SIZE * 0.1, GRID_FONT_SIZE, .PREFER_NORMAL)
 			}
