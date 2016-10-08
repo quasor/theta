@@ -26,7 +26,7 @@ class Canvas :: Layout.Renderer {
 
 	# Viewport transform
 	var _origin = Vector.new
-	var _scale = 100.0
+	var _scale = 25600.0
 
 	# Temporary objects to avoid GC
 	var _transformA = Transform.new
@@ -70,15 +70,16 @@ class Canvas :: Layout.Renderer {
 
 	def adjustScaleWithPin(x double, y double, ratio double) {
 		_scale *= ratio
-		if _scale < 3 {
-			_scale = 3
+		if _scale < 2 {
+			_scale = 2
 			return
 		}
-		if _scale > 64000 {
-			_scale = 64000
+		if _scale > 25600 {
+			_scale = 25600
 			return
 		}
-		console.log(_scale)
+		var fs = Math.floor(_scale) as int
+		console.log("Scale: ", fs)
 		# _origin.x += (x - _origin.x) * (1 - ratio)
 		# _origin.y += (y - _origin.y) * (1 - ratio)
 	}
@@ -214,9 +215,11 @@ class Canvas :: Layout.Renderer {
 		var scale = _scale
 		var width = _platform.width
 		var height = _platform.height
+		var step = 100
 
-		# Grid lines
-			var step = Math.pow(10, Math.round(Math.log(scale / 64) / Math.log(10)))
+		# Grid lines - one line per pixel starting at 800% (scale=800)
+		if scale >= GRID_SHOW_LINES_AT_SCALE {
+
 			var ratio = step / scale
 			var left = Math.ceil(-origin.x * ratio) as int
 			var top = Math.ceil((height - origin.y) * -ratio) as int
@@ -225,29 +228,28 @@ class Canvas :: Layout.Renderer {
 
 			# Vertical axis
 			for x in left..right {
-				if scale >= 10000 {
+				# console.log("R", x)
 					var tx = origin.x + x * scale / step
-					_smooth.strokeLineWithoutEndpointAA(tx, 0, tx, height, x == 0 ? .BLACK : x % 10 == 0 ? GRID_DARK_COLOR : GRID_LIGHT_COLOR, x == 0 ? 2 : 1)
-				}
+					_smooth.strokeLineWithoutEndpointAA(tx, 0, tx, height, GRID_LIGHT_COLOR, 0.5)
 			}
 
 			# Horizontal axis
 			for y in top..bottom {
-				if scale >= 10000 {
 					var ty = origin.y - y * scale / step
-					_smooth.strokeLineWithoutEndpointAA(0, ty, width, ty, y == 0 ? .BLACK : y % 10 == 0 ? GRID_DARK_COLOR : GRID_LIGHT_COLOR, y == 0 ? 2 : 1)
-				}
+					_smooth.strokeLineWithoutEndpointAA(0, ty, width, ty, GRID_LIGHT_COLOR, 0.5)
 			}
+		}
 
 		# Coordinate text and tick marks
 		var log = Math.log(scale / 100) / Math.log(10)
 		var intPart = Math.floor(log)
 		var fractPart = log - intPart
-		var textStep = Math.pow(10, intPart) * (
+		var textStep = Math.clamp(Math.pow(10, intPart) * (
 			fractPart > Math.log(5) / Math.log(10) ? 5 :
 			fractPart > Math.log(2) / Math.log(10) ? 2 :
-			1)
+			1), 0, step)
 		var textRatio = textStep / scale
+
 		var textLeft = Math.ceil((-100 - origin.x) * textRatio) as int
 		var textTop = Math.ceil((height - origin.y) * -textRatio) as int
 		var textRight = Math.ceil((width - origin.x) * textRatio) as int
@@ -257,22 +259,18 @@ class Canvas :: Layout.Renderer {
 		var textY = 0 # Math.clamp(origin.y, 0, height - GRID_FONT_SIZE * 1.3)
 		for x in textLeft..textRight {
 			var tx = origin.x + x * scale / textStep
-			if x != 0 {
-				_smooth.strokeLine(tx, 0, tx, 0 + GRID_TICK_SIZE, .BLACK, 2)
-			}
-			addText(_formatNumber(x / textStep), tx + GRID_FONT_SIZE * 0.3, textY + GRID_FONT_SIZE * 0.1, GRID_FONT_SIZE, .PREFER_NORMAL)
+			_smooth.strokeLine(tx, 0, tx, 0 + GRID_TICK_SIZE, GRID_DARK_COLOR, 2)
+			addText(_formatNumber(x / textStep * 100), tx + GRID_FONT_SIZE * 0.3, textY + GRID_FONT_SIZE * 0.1, GRID_FONT_SIZE, .PREFER_NORMAL)
 		}
 
 		# Vertical axis
 		var textX = 0 # Math.max(origin.x, 0) + GRID_FONT_SIZE * 0.3
 		for y in textTop..textBottom {
-			if y != 0 {
-				var text = _formatNumber(y / textStep)
-				var ty = origin.y - y * scale / textStep
-				_smooth.strokeLine(0, ty, 0 + GRID_TICK_SIZE, ty, .BLACK, 2)
-				addText(text, Math.min(textX, width - _computeTextWidth(text, GRID_FONT_SIZE, .PREFER_NORMAL) - GRID_FONT_SIZE * 0.3),
-					ty + GRID_FONT_SIZE * 0.1, GRID_FONT_SIZE, .PREFER_NORMAL)
-			}
+			var text = _formatNumber(y / textStep * 100)
+			var ty = origin.y - y * scale / textStep
+			_smooth.strokeLine(0, ty, 0 + GRID_TICK_SIZE, ty, GRID_DARK_COLOR, 2)
+			addText(text, Math.min(textX, width - _computeTextWidth(text, GRID_FONT_SIZE, .PREFER_NORMAL) - GRID_FONT_SIZE * 0.3),
+				ty + GRID_FONT_SIZE * 0.1, GRID_FONT_SIZE, .PREFER_NORMAL)
 		}
 	}
 
@@ -398,6 +396,7 @@ namespace Canvas {
 	const GRID_LIGHT_COLOR = Color.new(0, 0, 0, 31)
 	const GRID_DARK_COLOR = Color.new(0, 0, 0, 127)
 	const SCREEN_QUAD_FORMAT = GPU.VertexFormat.new.add(GLSLX_NAME_POSITION2, .FLOAT, 2)
+	const GRID_SHOW_LINES_AT_SCALE = 800
 
 	# 6x subpixel AA pattern
 	#
